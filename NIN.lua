@@ -1040,12 +1040,13 @@ function job_buff_change(buff, gain)
     end
 
     -- If we gain or lose any haste buffs, adjust which gear set we target.
-    if S{'haste', 'march', 'embrava', 'haste samba', 'geo-haste', 'indi-haste'}:contains(buff:lower()) then
-        determine_haste_group()
-        if not midaction() then
-            handle_equipping_gear(player.status)
-        end
+    if S{'haste', 'march', 'mighty guard', 'embrava', 'haste samba', 'geo-haste', 'indi-haste'}:contains(buff:lower()) then
+    determine_haste_group()
+    if not midaction() then
+        handle_equipping_gear(player.status)
     end
+end
+
     
 end
 
@@ -1109,7 +1110,7 @@ function select_movement()
 end
 
 function determine_haste_group()
-    
+ 
     classes.CustomMeleeGroups:clear()
     -- assuming +4 for marches (ghorn has +5)
     -- Haste (white magic) 15%
@@ -1117,45 +1118,56 @@ function determine_haste_group()
     -- Haste (Merited DNC) 10% (never account for this)
     -- Victory March +0/+3/+4/+5    9.4/14%/15.6%/17.1% +0
     -- Advancing March +0/+3/+4/+5  6.3/10.9%/12.5%/14%  +0
-    -- Embrava 25%
+    -- Embrava 30% with 500 enhancing skill
+    -- Mighty Guard - 15%
     -- buffactive[580] = geo haste
     -- buffactive[33] = regular haste
+    -- buffactive[604] = mighty guard
     -- state.HasteMode = toggle for when you know Haste II is being cast on you
     -- Hi = Haste II is being cast. This is clunky to use when both haste II and haste I are being cast
-    -- but wtf can  you do..   I macro it, and use it often. 
     if state.HasteMode.value == 'Hi' then
-        if ( ((buffactive[33] or buffactive[580]) and buffactive.march) or (buffactive.embrava and buffactive[33]) or (buffactive.embrava and buffactive.march == 1) ) then
+        if ( ( (buffactive[33] or buffactive[580] or buffactive.embrava) and (buffactive.march or buffactive[604]) ) or
+             ( buffactive[33] and (buffactive[580] or buffactive.embrava) ) or
+             ( buffactive.march == 2 and buffactive[604] ) ) then
             add_to_chat(8, '-------------Max-Haste Mode Enabled--------------')
             classes.CustomMeleeGroups:append('MaxHaste')
-        elseif ( (buffactive[33] or buffactive.march == 2) and buffactive['haste samba'] ) or buffactive.embrava then
+        elseif ( (buffactive[33] or buffactive.march == 2 or buffactive[580]) and buffactive['haste samba'] ) then
             add_to_chat(8, '-------------Haste 35%-------------')
             classes.CustomMeleeGroups:append('Haste_35')
-        elseif buffactive[580] or buffactive[33] or buffactive.march == 2 then
+        elseif ( ( buffactive[580] or buffactive[33] or buffactive.march == 2 ) or
+                 ( buffactive.march == 1 and buffactive[604] ) ) then
             add_to_chat(8, '-------------Haste 30%-------------')
             classes.CustomMeleeGroups:append('Haste_30')
-        elseif buffactive.march == 1 then
+        elseif ( buffactive.march == 1 or buffactive[604] ) then
             add_to_chat(8, '-------------Haste 15%-------------')
             classes.CustomMeleeGroups:append('Haste_15')
         end
     else
-        if ( buffactive[580] and ( buffactive.march or buffactive[33] or buffactive.embrava) ) or 
-           ( buffactive.embrava and buffactive.march == 2 ) or (buffactive[33] and buffactive.march == 2) or 
-           ( buffactive.embrava and ( buffactive.march == 1 or buffactive[33] ) ) then
+        if ( buffactive[580] and ( buffactive.march or buffactive[33] or buffactive.embrava or buffactive[604]) ) or  -- geo haste + anything
+           ( buffactive.embrava and (buffactive.march or buffactive[33] or buffactive[604]) ) or  -- embrava + anything
+           ( buffactive.march == 2 and (buffactive[33] or buffactive[604]) ) or  -- two marches + anything
+           ( buffactive[33] and buffactive[604] and buffactive.march ) then -- haste + mighty guard + any marches
             add_to_chat(8, '-------------Max Haste Mode Enabled--------------')
             classes.CustomMeleeGroups:append('MaxHaste')
-        elseif (buffactive[33] and buffactive['haste samba'] and buffactive.march == 1) or buffactive.embrava or (buffactive.march == 2 and buffactive['haste samba']) then
+        elseif ( (buffactive[604] or buffactive[33]) and buffactive['haste samba'] and buffactive.march == 1) or -- MG or haste + samba with 1 march
+               ( buffactive.march == 2 and buffactive['haste samba'] ) or
+               ( buffactive[580] and buffactive['haste samba'] ) then 
             add_to_chat(8, '-------------Haste 35%-------------')
             classes.CustomMeleeGroups:append('Haste_35')
-        elseif buffactive.march == 2 or (buffactive[33] and buffactive.march == 1) or buffactive[580] then
+        elseif ( buffactive.march == 2 ) or -- two marches from ghorn
+               ( (buffactive[33] or buffactive[604]) and buffactive.march == 1 ) or  -- MG or haste + 1 march
+               ( buffactive[580] ) or  -- geo haste
+               ( buffactive[33] and buffactive[604] ) then  -- haste with MG
             add_to_chat(8, '-------------Haste 30%-------------')
             classes.CustomMeleeGroups:append('Haste_30')
-        elseif buffactive[33] or buffactive.march == 1 then
+        elseif buffactive[33] or buffactive[604] or buffactive.march == 1 then
             add_to_chat(8, '-------------Haste 15%-------------')
             classes.CustomMeleeGroups:append('Haste_15')
         end
     end
-
+ 
 end
+
 
 -- Handle notifications of general user state change.
 function job_state_change(stateField, newValue, oldValue)
